@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Path;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
@@ -18,6 +19,8 @@ import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -119,13 +122,11 @@ public class DownloadIntentService extends IntentService  {
                             Bundle b1 = new Bundle();
                             b1.putString("ServicioDescarga", String.valueOf(porc));
                             mReceiver.send(this.PROGRESS, b1);
-
                         } else {
                             Integer porc = total;
                             Bundle b1 = new Bundle();
                             b1.putString("ServicioDescarga", String.valueOf(porc));
                             mReceiver.send(this.PROGRESS, b1);
-
                         }
 
                     }//while
@@ -133,35 +134,75 @@ public class DownloadIntentService extends IntentService  {
                     //cerramos los Streams
                     bos.close();
                     is.close();
+            //++Obtenemos el path de la imagen para pasarlo con el Bundle (y no el bitmap)
+                    String[] data = urlImagenString.split("/");
+                    String[] f = data[data.length - 1].split("\\.");
 
-                    byte[] arrayImagen = bos.toByteArray();
-                    imagenBmpDescargada = BitmapFactory.decodeByteArray(arrayImagen, 0, arrayImagen.length);
+                    if (f.length < 2) {
+                        f = new String[]{"unknown", "jpg"};
+                    }
+                    //directorio de la caché
+                    File directory = getExternalCacheDir();
+
+                    //creo el fichero temporal
+                    File temporalFile = File.createTempFile(f[0], "." + f[1], directory);
+
+                    //lo elimino al salir
+                    temporalFile.deleteOnExit();
+
+                    //creo el stream sobre el fichero temporal
+                    FileOutputStream fos = new FileOutputStream(temporalFile);
+                    fos.write(bos.toByteArray());
+
+                    String pathImagen = temporalFile.getPath();
+
+                    //byte[] arrayImagen = bos.toByteArray();
+                    //imagenBmpDescargada = BitmapFactory.decodeByteArray(arrayImagen, 0, arrayImagen.length);
 
                     Log.d(TAG, "FINALIZA la descarga de la imagen");
                     Bundle b2 = new Bundle();
                     b2.putString("ServicioDescarga", "Finalizada la descarga");
-                    b2.putParcelable("bitmapImagen", imagenBmpDescargada);
+                    //b2.putParcelable("bitmapImagen", imagenBmpDescargada);
+                    b2.putString("path", pathImagen);
                     mReceiver.send(this.FINSISHED, b2);
 
                 }else {
-
+                    Log.d(TAG, "Servicio NO Correcto! la url no corresponde a una imagen");
+                    Bundle b2 = new Bundle();
+                    b2.putString("tipoError", "La url no corresponde a una imagen");
+                    mReceiver.send(this.ERROR, b2);
                 }
                     // TODO: Devolver la URI de la imagen si todo ha ido bien.
 
                     // TODO: Controlar los casos en los que no ha ido bien: excepciones en las conexiones, etc...
                 } catch(UnsupportedEncodingException e){
+                    Bundle b2 = new Bundle();
+                    b2.putString("tipoError", "UnsupportedEncodingException");
+                    mReceiver.send(this.ERROR, b2);
                     e.printStackTrace();
                 } catch(ProtocolException e){
+                    Bundle b2 = new Bundle();
+                    b2.putString("tipoError", "ProtocolException");
+                    mReceiver.send(this.ERROR, b2);
                     e.printStackTrace();
                 } catch(MalformedURLException e){
+                    Bundle b2 = new Bundle();
+                    b2.putString("tipoError", "MalformedURLException");
+                    mReceiver.send(this.ERROR, b2);
                     e.printStackTrace();
                 } catch(IOException e){
+                    Bundle b2 = new Bundle();
+                    b2.putString("tipoError", "IOException");
+                    mReceiver.send(this.ERROR, b2);
                     e.printStackTrace();
                 }
 
             } else {
 
                 Log.d(TAG, "Servicio NO Correcto! Intent = null");
+                Bundle b2 = new Bundle();
+                b2.putString("tipoError", "Intent = null");
+                mReceiver.send(this.ERROR, b2);
             }
 
         }

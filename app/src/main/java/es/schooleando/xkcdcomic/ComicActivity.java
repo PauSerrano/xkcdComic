@@ -2,17 +2,21 @@ package es.schooleando.xkcdcomic;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
 import java.util.Random;
 
 public class ComicActivity extends AppCompatActivity implements BgResultReceiver.Receiver {
@@ -83,13 +87,25 @@ public class ComicActivity extends AppCompatActivity implements BgResultReceiver
             case DownloadIntentService.FINSISHED:
                 Log.d(LOGTAG, "Estamos en ReceiverResult_FINALIZADO");
 
-                ivImagen.setImageBitmap((Bitmap) resultData.get("bitmapImagen"));
+                //ivImagen.setImageBitmap((Bitmap) resultData.get("bitmapImagen"));
+
+                //Obtenemos un path a través del  resultData y no pasamos un Bitmap
+                String pathImagen = resultData.getString("path");
+
+                //Creamos un nuevo archivo
+                File archivo = new File(pathImagen);
+                if (archivo.exists()){
+
+                    Bitmap bmImg = BitmapFactory.decodeFile(pathImagen);
+                    ivImagen.setImageBitmap(bmImg);
+                }
 
                 break;
             case DownloadIntentService.ERROR:
                 Log.d(LOGTAG, "Estamos en ReceiverResult_LOG");
 
-                Toast.makeText(this, "Error al descargar la imagen", Toast.LENGTH_SHORT).show();
+                String tipoError = resultData.getString("tipoError");
+                Toast.makeText(this, "Tipo de Error: "+tipoError, Toast.LENGTH_SHORT).show();
                 break;
             case DownloadIntentService.INICIO:
 
